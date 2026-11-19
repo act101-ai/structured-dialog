@@ -1,0 +1,16 @@
+{
+  "name": "structured-dialog",
+  "version": "0.1.0",
+  "description": "An output style for low-cost dialog between an operator and an agent: conclusion first, playback of what changed, visible open issues, one question with a default, causal order.",
+  "author": {
+    "name": "Kage Martin",
+    "url": "https://github.com/act101-ai"
+  },
+  "repository": "https://github.com/act101-ai/structured-dialog",
+  "license": "MIT",
+  "keywords": [
+    "output-style",
+    "dialog",
+    "communication"
+  ]
+}
