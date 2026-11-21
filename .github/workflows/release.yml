@@ -1,0 +1,68 @@
+# Rule: if the tag for the version in .claude-plugin/plugin.json exists, raise the patch number, commit and push.
+# Then tag the version and make a GitHub release. A version set by hand (no tag yet) is tagged as it is.
+#
+# No loop: a commit pushed with the workflow's own token does not start a new workflow run.
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['.github/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # A manual run from a different branch must not push that branch to main.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump, tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          manifest=.claude-plugin/plugin.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          cur=$(jq -r '.version' "$manifest")
+          if [[ ! "$cur" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "error: version in $manifest is '$cur'; it must be N.N.N" >&2
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$cur" >/dev/null; then
+            # The current version is released. This push holds unreleased changes.
+            new="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+            tmp=$(mktemp)
+            jq --arg v "$new" '.version = $v' "$manifest" > "$tmp"
+            cat "$tmp" > "$manifest"
+            rm -f "$tmp"
+            if [[ "$(git diff --numstat -- "$manifest")" != "1"$'\t'"1"$'\t'"$manifest" ]] \
+              || ! git diff -U0 -- "$manifest" | grep -qxF "+  \"version\": \"$new\","; then
+              echo "error: the change to $manifest is not the version line only" >&2
+              git diff -- "$manifest" >&2
+              exit 1
+            fi
+            git commit -m "release: v$new" -- "$manifest"
+            git push origin HEAD:main
+          else
+            # An author set this version by hand. Tag it as it is.
+            new="$cur"
+          fi
+
+          git tag -a "v$new" -m "v$new"
+          git push origin "v$new"
+          gh release create "v$new" --generate-notes
