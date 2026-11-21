@@ -1,6 +1,6 @@
 {
   "name": "structured-dialog",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An output style for low-cost dialog between an operator and an agent: conclusion first, playback of what changed, visible open issues, one question with a default, causal order.",
   "author": {
     "name": "Kage Martin",
