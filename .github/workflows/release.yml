@@ -1,5 +1,5 @@
-# Rule: if the tag for the version in .claude-plugin/plugin.json exists, raise the patch number, commit and push.
-# Then tag the version and make a GitHub release. A version set by hand (no tag yet) is tagged as it is.
+# Rule: if the tag for the version in .claude-plugin/plugin.json exists on an earlier commit, raise the patch number, commit and push.
+# Then tag the version and make a GitHub release. A version set by hand (no tag yet) is tagged as it is. If the tag is on HEAD, do nothing.
 #
 # No loop: a commit pushed with the workflow's own token does not start a new workflow run.
 name: release
@@ -25,6 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # Work on the current head of main, not on the commit of the event.
+          ref: main
           fetch-depth: 0
 
       - name: Bump, tag and release
@@ -41,6 +43,12 @@ jobs:
           if [[ ! "$cur" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "error: version in $manifest is '$cur'; it must be N.N.N" >&2
             exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$cur" >/dev/null \
+            && [[ "$(git rev-parse "v$cur^{commit}")" == "$(git rev-parse HEAD)" ]]; then
+            echo "nothing to release: HEAD is v$cur"
+            exit 0
           fi
 
           if git rev-parse -q --verify "refs/tags/v$cur" >/dev/null; then
