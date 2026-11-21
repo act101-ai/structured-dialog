@@ -38,3 +38,15 @@ Claude Code reads style files when it starts. After you edit the style, start a 
 ```sh
 claude plugin validate .
 ```
+
+## Releases
+
+Every merge to `main` is released automatically. The workflow `.github/workflows/release.yml` raises the patch number in `.claude-plugin/plugin.json`, tags it and makes a GitHub release. Do not change the version by hand for a fix.
+
+For a minor or major release, set the new version in `plugin.json` in the same pull request. The workflow tags it as it is.
+
+Why: Claude Code gives installed users a change only when the plugin version changes.
+
+The marketplace entry in `act101-ai/act101` has no `version`: the version in `plugin.json` is the only one.
+
+Rule approved by the operator, 2026-11-21.
